@@ -10,7 +10,8 @@ import java.nio.file.attribute.PosixFilePermissions;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
-import java.util.Locale;
+import java.util.Collections;
+import java.util.Comparator;
 
 import org.apache.commons.cli.CommandLine;
 import org.apache.commons.cli.CommandLineParser;
@@ -45,6 +46,10 @@ public class Lscommand {
 	public void run(String[] args) throws IOException {
 		
 		File dir = new File(System.getProperty("user.dir"));
+		if(!args[args.length-1].substring(0,1).equals("-"))
+		{
+			dir = new File(args[args.length-1]);
+		}
 		/* 파일 경로가 입력되면 파일 경로 바꾸기*/
 		File[] fileList = dir.listFiles();
 
@@ -52,6 +57,7 @@ public class Lscommand {
 			File file = fileList[i];
 			Path path = file.toPath();
 			PosixFileAttributes attr = Files.readAttributes(path, PosixFileAttributes.class);
+			
 			//find file type
 			if(attr.isRegularFile())
 				fileType = "-";
@@ -75,8 +81,6 @@ public class Lscommand {
 		    //time
 			DateFormat simpleDateFormat = new SimpleDateFormat("MMM dd HH:mm");
 			time = simpleDateFormat.format(fileTime.toMillis());
-			//System.out.println("lastModifiedTime: " + attr.lastModifiedTime());
-			
 			//link count
 			if(file.isDirectory())
 			{
@@ -96,16 +100,42 @@ public class Lscommand {
 			 
 		}
 		
-        /*for(String child: childs){
-            System.out.println(child);
-        }*/
-        
 		Options options = createOptions();
 		
 		if(parseOptions(options,args)) {
-			
-			//-o data/results.csv -i data/hw5data.csv -a 1 -s 2003 -e 2007
-			
+			Comparator<FolderInfo> sortorder;
+			if(r_option)
+			{
+				if(S_option)
+				{
+					sortorder = new reverseCompareSize();
+				}
+				else if(t_option)
+				{
+					sortorder = new reverseCompareTime();
+				}
+				else 
+				{
+					sortorder = new reverseCompareFileName();
+				}
+			}
+			else
+			{
+				if(S_option)
+				{
+					sortorder = new CompareSize();
+				}
+				else if(t_option)
+				{
+					sortorder = new CompareTime();
+				}
+				else 
+				{
+					sortorder = new CompareFileName();
+				}
+			}
+		    Collections.sort(folderInfos, sortorder);
+		     
 			if(l_option) {
 				for(FolderInfo f : folderInfos)
 				{
@@ -125,10 +155,9 @@ public class Lscommand {
 					);
 				}
 			}
-			// Generate result lines to be saved.
 			
 	}
-	}
+}
 
 	private boolean parseOptions(Options options, String[] args) {
 		CommandLineParser parser = new DefaultParser();
@@ -184,4 +213,53 @@ public class Lscommand {
 		String footer ="";
 		formatter.printHelp("ls", header, options, footer, true);
 	}
+	
+	class reverseCompareSize implements Comparator<FolderInfo> {
+		 
+	    @Override
+	    public int compare(FolderInfo o1, FolderInfo o2) {
+	        return (int) (o1.getFileSize() - o2.getFileSize());
+	    }
+	}
+	
+	class CompareSize implements Comparator<FolderInfo> {
+		 
+	    @Override
+	    public int compare(FolderInfo o1, FolderInfo o2) {
+	        return (int) (o2.getFileSize() - o1.getFileSize());
+	    }
+	}
+	class CompareFileName implements Comparator<FolderInfo> {
+		 
+	    @Override
+	    public int compare(FolderInfo o1, FolderInfo o2) {
+		    return o1.getFileName().compareTo(o2.getFileName());
+	    }
+	}
+	
+	class reverseCompareFileName implements Comparator<FolderInfo> {
+		 
+	    @Override
+	    public int compare(FolderInfo o1, FolderInfo o2) {
+		    return o2.getFileName().compareTo(o1.getFileName());
+	    }
+	}
+	
+	class CompareTime implements Comparator<FolderInfo> {
+		 
+	    @Override
+	    public int compare(FolderInfo o1, FolderInfo o2) {
+		    return o1.getTime().compareTo(o2.getTime());
+	    }
+	}
+	
+	class reverseCompareTime implements Comparator<FolderInfo> {
+		 
+	    @Override
+	    public int compare(FolderInfo o1, FolderInfo o2) {
+		    return o2.getTime().compareTo(o1.getTime());
+	    }
+	}
+	
+	 
 }
